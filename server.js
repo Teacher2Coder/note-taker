@@ -1,83 +1,102 @@
+// Import required functions
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
 const uuid = require('./helpers/uuid');
 const db = require('./db/db.json');
 
+// Set port and call app
 const PORT = process.env.PORT || 3001;
 const app = express();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware
 app.use(express.static('public'));
 
+// Home route
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, '/public/index.html'));
 });
 
+// Note route
 app.get('/notes', (req, res) => {
     res.sendFile(path.join(__dirname, './public/notes.html'));
 });
 
+// API / Note route (I think my issue is here)
 app.get('/api/notes', (req, res) => {
-    res.status(200).json(`${req.method} request received to get notes`);
+  // Reads the db.json file 
+  fs.readFile('./db/db.json', 'utf8', (err, data) => {
+    if (err) {
+      console.error(err);
+    } else {
+      // Sends db.json
+      res.send(data);
+    } 
+  })
+  
+  console.info(`${req.method} request received to get notes`);
+})
 
+// Adds new note to db.json
+app.post('/api/notes', (req, res) => {
+  // Log the request to the console
+  console.info(`${req.method} request received to add a note`);
+  
+  // destructures the request's body
+  const { title, text } = req.body;
+  
+    // If there is a title and text, read and write db.json
+  if (title && text ) {
+    // Contructs a newNote object
+    const newNote = {
+      title,
+      text,
+      note_id: uuid(),
+    };
+    
+    // Read the current db.json
     fs.readFile('./db/db.json', 'utf8', (err, data) => {
       if (err) {
         console.error(err);
       } else {
-        return data;
+        // Parse the json file
+        const parsedNotes = JSON.parse(data);
+        // add the new note to the parsed data
+        parsedNotes.push(newNote);
+        
+        // Write the file with the new note included
+        fs.writeFile('./db/db.json', 
+          JSON.stringify(parsedNotes, null, 4), 
+          (writeErr) => writeErr 
+            ? console.error(writeErr) 
+            : console.info('Successfully updated notes!')
+        );
       }
-    })
-
-    console.info(`${req.method} request received to get notes`);
-})
-
-app.post('/api/notes', (req, res) => {
-    console.info(`${req.method} request received to add a note`);
+    });
   
-    const { title, text } = req.body;
+    // Create a response object with  the added note in the body
+    const response = {
+      status: 'success',
+      body: newNote,
+    };
   
-    if (title && text ) {
-      const newNote = {
-        title,
-        text,
-        note_id: uuid(),
-      };
-  
-      fs.readFile('./db/db.json', 'utf8', (err, data) => {
-        if (err) {
-          console.error(err);
-        } else {
-          const parsedNotes = JSON.parse(data);
-          parsedNotes.push(newNote);
-  
-          fs.writeFile('./db/db.json', 
-            JSON.stringify(parsedNotes, null, 4), 
-            (writeErr) => writeErr 
-              ? console.error(writeErr) 
-              : console.info('Successfully updated notes!'));
-        }
-      });
-  
-      const response = {
-        status: 'success',
-        body: newNote,
-      };
-  
-      console.log(response);
-      res.status(201).json(response);
-    } else {
-      res.status(500).json('Error in adding note');
-    }
+    // Log the response
+    console.log(response);
+    res.status(201).json(response);
+  } else {
+    res.status(500).json('Error in adding note');
+  }
 });
 
+// Deletes a note from db.json
 app.delete('/api/notes/:id', (req, res) => {
-    console.info(`${req.method} request received to remove a note`)
-})
+  console.info(`${req.method} request received to remove a note`)
+});
   
-
+// Sets server to listen
 app.listen(PORT, () =>
-    console.log(`Serving static asset routes on port ${PORT}!`)
+  console.log(`Serving static asset routes on port ${PORT}!`)
 );

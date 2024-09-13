@@ -22,7 +22,7 @@ npm run start
 ```
 
 ## Usage
-When running the server locally, open your browser to [localhost:3001](localhost:3001)
+When running the server locally, open your browser to [[localhost:3001](localhost:3001)]
 
 You will be greeted by a landing page that should look like this:
 
